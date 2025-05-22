@@ -4,7 +4,7 @@ ARG PYTHON_VERSION=3.9
 FROM deepnote/python:${PYTHON_VERSION}
 
 # Set environment variables
-ARG R_VERSION=4.4.0
+ARG R_VERSION=4.5.0
 # Use the R version specified by the build argument
 ENV R_VERSION="${R_VERSION}" \
 	R_HOME="/usr/local/lib/R" \
