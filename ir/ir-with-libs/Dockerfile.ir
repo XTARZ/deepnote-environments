@@ -1,7 +1,7 @@
 ARG R_VERSION=4.5.0
 ARG CIRCLE_PULL_REQUEST
 
-FROM deepnote/ir:${R_VERSION}${CIRCLE_PULL_REQUEST:+-ra-${CIRCLE_PULL_REQUEST##*/}}
+FROM ghcr.io/xtarz/deepnote-environments:v4.5.0
 
 # Workaround for Java to install correctly
 RUN mkdir -p /usr/share/man/man1/
