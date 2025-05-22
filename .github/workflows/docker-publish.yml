@@ -60,7 +60,7 @@ jobs:
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
           context: "ir/ir-base" # 构建上下文为当前目录
-          file: "ir/ir-base/Dockerfile.ir"
+          file: "ir/ir-with-libs/Dockerfile.ir"
           push: ${{ github.event_name != 'pull_request' }} # 是否推送镜像
           tags: ${{ steps.meta.outputs.tags }} # 镜像标签
           labels: ${{ steps.meta.outputs.labels }} # 镜像标签
