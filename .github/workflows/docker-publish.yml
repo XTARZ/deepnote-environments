@@ -1,98 +1,90 @@
 name: Docker
 
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
+# 该工作流用于自动构建和发布 Docker 镜像
 
 on:
   schedule:
-    - cron: '31 23 * * *'
+    - cron: "31 23 * * *" # 每天 UTC 时间 23:31 定时触发
   push:
-    branches: [ "main" ]
-    # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
+    branches: ["main"] # 当 main 分支有 push 时触发
+    tags: ["v*.*.*"] # 当推送符合语义化版本号的 tag 时触发
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"] # 当 main 分支有 PR 时触发
 
 env:
-  # Use docker.io for Docker Hub if empty
-  REGISTRY: ghcr.io
-  # github.repository as <account>/<repo>
-  IMAGE_NAME: ${{ github.repository }}
-
+  REGISTRY: ghcr.io # 镜像仓库地址，默认为 GitHub 容器注册表
+  IMAGE_NAME: ${{ github.repository }} # 镜像名称，格式为 <账户>/<仓库>
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # 运行环境为最新的 Ubuntu
     permissions:
-      contents: read
-      packages: write
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
-      id-token: write
+      contents: read # 读取仓库内容权限
+      packages: write # 写入包权限（用于推送镜像）
+      id-token: write # 用于 sigstore/fulcio 身份认证
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # 检出仓库代码
 
-      # Install the cosign tool except on PR
-      # https://github.com/sigstore/cosign-installer
+      # 安装 cosign 工具（用于镜像签名），仅在非 PR 场景下
       - name: Install cosign
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 #v3.5.0
         with:
-          cosign-release: 'v2.2.4'
+          cosign-release: "v2.2.4"
 
-      # Set up BuildKit Docker container builder to be able to build
-      # multi-platform images and export cache
-      # https://github.com/docker/setup-buildx-action
+      # 设置 BuildKit Docker 构建器，支持多平台构建和缓存
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
-      # Login against a Docker registry except on PR
-      # https://github.com/docker/login-action
+      # 登录到镜像仓库（非 PR 场景下）
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }} # 仓库地址
+          username: ${{ github.actor }} # 用户名
+          password: ${{ secrets.GITHUB_TOKEN }} # 密码（GitHub 自动提供）
 
-      # Extract metadata (tags, labels) for Docker
-      # https://github.com/docker/metadata-action
+      # 提取 Docker 镜像的元数据（标签、标签名等）
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      # Build and push Docker image with Buildx (don't push on PR)
-      # https://github.com/docker/build-push-action
+      # 构建并推送 Docker 镜像（PR 场景下不推送）
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          context: "ir/ir-base" # 构建上下文为当前目录
+          file: "ir/ir-base/Dockerfile.ir"
+          push: ${{ github.event_name != 'pull_request' }} # 是否推送镜像
+          tags: ${{ steps.meta.outputs.tags }} # 镜像标签
+          labels: ${{ steps.meta.outputs.labels }} # 镜像标签
+          cache-from: type=gha # 使用 GitHub Actions 缓存作为构建缓存源
+          cache-to: type=gha,mode=max # 最大化缓存
 
-      # Sign the resulting Docker image digest except on PRs.
-      # This will only write to the public Rekor transparency log when the Docker
-      # repository is public to avoid leaking data.  If you would like to publish
-      # transparency data even for private images, pass --force to cosign below.
-      # https://github.com/sigstore/cosign
+      # 对已发布的 Docker 镜像进行签名（非 PR 场景下）
       - name: Sign the published Docker image
         if: ${{ github.event_name != 'pull_request' }}
         env:
-          # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
-          TAGS: ${{ steps.meta.outputs.tags }}
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}
-        # This step uses the identity token to provision an ephemeral certificate
-        # against the sigstore community Fulcio instance.
+          TAGS: ${{ steps.meta.outputs.tags }} # 镜像标签
+          DIGEST: ${{ steps.build-and-push.outputs.digest }} # 镜像摘要
+          # 使用 sigstore 社区 Fulcio 实例签发临时证书进行签名
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+        # 仅构建指定的 Dockerfile（例如 ./docker/Dockerfile）
+        # 可根据实际路径调整 context 和 file 参数
+        # 示例：只构建 docker/Dockerfile 文件
+        # - name: Build and push specific Dockerfile
+        #   uses: docker/build-push-action@v5
+        #   with:
+        #     context: ./docker
+        #     file: ./docker/Dockerfile
+        #     push: ${{ github.event_name != 'pull_request' }}
+        #     tags: ${{ steps.meta.outputs.tags }}
+        #     labels: ${{ steps.meta.outputs.labels }}
+        #     cache-from: type=gha
+        #     cache-to: type=gha,mode=max
