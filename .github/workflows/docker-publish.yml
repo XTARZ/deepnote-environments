@@ -3,10 +3,10 @@ name: Docker
 # 该工作流用于自动构建和发布 Docker 镜像
 
 on:
-  schedule:
-    - cron: "31 23 * * *" # 每天 UTC 时间 23:31 定时触发
+  # schedule:
+  #   - cron: "31 23 * * *" # 每天 UTC 时间 23:31 定时触发
   push:
-    branches: ["main"] # 当 main 分支有 push 时触发
+    # branches: ["main"] # 当 main 分支有 push 时触发
     tags: ["v*.*.*"] # 当推送符合语义化版本号的 tag 时触发
   pull_request:
     branches: ["main"] # 当 main 分支有 PR 时触发
