@@ -60,6 +60,8 @@ RUN apt-get update && apt-get install -y ${BUILDDEPS} \
   R -e "install.packages('rgl', repos='https://cloud.r-project.org', dependencies=TRUE)" && \
   R -e "install.packages('hdf5r', repos='https://cloud.r-project.org', dependencies=TRUE)" && \
   R -e "install.packages('rJava', repos='https://cloud.r-project.org', dependencies=TRUE)" && \
+  R -e "insstall.packages('devtools', repos='https://cloud.r-project.org', dependencies=TRUE)" && \
+  R -e "insstall.packages('stm', repos='https://cloud.r-project.org', dependencies=TRUE)" && \
   apt-get clean && \
   apt-get remove --purge -y ${BUILDDEPS} && \
 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
